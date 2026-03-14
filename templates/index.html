@@ -53,6 +53,8 @@
     }
     .url-input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
     .url-input::placeholder { color: #64748b; }
+    select.url-input { background-color: #111118; color: #e2e8f0; }
+    select.url-input option { background-color: #1a1a24; color: #e2e8f0; }
     .btn-primary {
       background: linear-gradient(135deg, #6366f1, #4f46e5);
       color: white; font-weight: 600;
@@ -114,7 +116,7 @@
             class="url-input w-full rounded-lg px-4 py-3 text-sm"
           />
         </div>
-        <div class="flex items-center gap-4">
+        <div class="flex items-end gap-4">
           <div class="flex-1">
             <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Pages to crawl</label>
             <select id="max-pages" class="url-input w-full rounded-lg px-3 py-2.5 text-sm cursor-pointer">
@@ -124,11 +126,9 @@
               <option value="5">5 pages (thorough)</option>
             </select>
           </div>
-          <div class="flex-1 flex items-end">
-            <button id="analyze-btn" onclick="startAnalysis()" class="btn-primary w-full rounded-lg px-6 py-3 text-sm">
-              Analyze Site
-            </button>
-          </div>
+          <button id="analyze-btn" onclick="startAnalysis()" class="btn-primary flex-1 rounded-lg px-6 py-2.5 text-sm">
+            Analyze Site
+          </button>
         </div>
       </div>
       <p class="text-xs text-gray-500 mt-4 text-center">
