@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DataScraper — Web Pattern Analyzer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    body { background: #0a0a0f; scrollbar-width: thin; }
+    .gradient-text {
+      background: linear-gradient(135deg, #6366f1, #22d3ee);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+    }
+    .card-glow {
+      box-shadow: 0 0 24px rgba(99,102,241,0.12);
+    }
+    .finding-high { border-left: 3px solid #6366f1; }
+    .finding-medium { border-left: 3px solid #22d3ee; }
+    .finding-low { border-left: 3px solid #4b5563; }
+    .badge-high { background: rgba(99,102,241,0.15); color: #a5b4fc; }
+    .badge-medium { background: rgba(34,211,238,0.12); color: #67e8f9; }
+    .badge-low { background: rgba(75,85,99,0.25); color: #9ca3af; }
+    .bar-fill { background: linear-gradient(90deg, #6366f1, #22d3ee); border-radius: 4px; transition: width 0.8s ease; }
+    .spinner {
+      width: 44px; height: 44px;
+      border: 3px solid rgba(99,102,241,0.2);
+      border-top-color: #6366f1;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .fade-in { animation: fadeIn 0.5s ease forwards; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    .tag-pill {
+      display: inline-flex; align-items: center;
+      padding: 3px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 500;
+      background: rgba(99,102,241,0.15); color: #c7d2fe;
+      border: 1px solid rgba(99,102,241,0.2);
+    }
+    input:focus { outline: none; }
+    .url-input {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(99,102,241,0.3);
+      color: #e2e8f0;
+      transition: border-color 0.2s;
+    }
+    .url-input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+    .url-input::placeholder { color: #64748b; }
+    .btn-primary {
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      color: white; font-weight: 600;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .post-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 8px;
+    }
+    .chart-container { position: relative; height: 280px; }
+    .stat-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 10px; padding: 16px;
+      transition: border-color 0.2s;
+    }
+    .stat-card:hover { border-color: rgba(99,102,241,0.3); }
+  </style>
+</head>
+<body class="text-gray-200 min-h-screen font-sans antialiased">
+
+  <!-- Header -->
+  <header class="border-b border-white/5 px-6 py-4">
+    <div class="max-w-6xl mx-auto flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:linear-gradient(135deg,#6366f1,#22d3ee)">
+        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+      </div>
+      <h1 class="text-lg font-bold gradient-text">DataScraper</h1>
+      <span class="text-xs text-gray-500 font-medium ml-1">Web Pattern Analyzer</span>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-10">
+
+    <!-- Hero + Input -->
+    <div class="text-center mb-10">
+      <h2 class="text-4xl font-bold mb-3">
+        <span class="gradient-text">Discover Patterns</span> in Any Website
+      </h2>
+      <p class="text-gray-400 text-base max-w-xl mx-auto">
+        Enter a URL — DataScraper extracts posts, analyzes content, and surfaces the most interesting patterns automatically.
+      </p>
+    </div>
+
+    <div class="card card-glow max-w-2xl mx-auto p-6 mb-10">
+      <div class="flex flex-col gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Website URL</label>
+          <input
+            id="url-input"
+            type="text"
+            placeholder="https://example.com/blog"
+            class="url-input w-full rounded-lg px-4 py-3 text-sm"
+          />
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="flex-1">
+            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Pages to crawl</label>
+            <select id="max-pages" class="url-input w-full rounded-lg px-3 py-2.5 text-sm cursor-pointer">
+              <option value="1">1 page (fast)</option>
+              <option value="2">2 pages</option>
+              <option value="3">3 pages</option>
+              <option value="5">5 pages (thorough)</option>
+            </select>
+          </div>
+          <div class="flex-1 flex items-end">
+            <button id="analyze-btn" onclick="startAnalysis()" class="btn-primary w-full rounded-lg px-6 py-3 text-sm">
+              Analyze Site
+            </button>
+          </div>
+        </div>
+      </div>
+      <p class="text-xs text-gray-500 mt-4 text-center">
+        Works best on blogs, news sites, forums &amp; content-heavy pages. JavaScript-heavy SPAs may yield limited results.
+      </p>
+    </div>
+
+    <!-- Loading -->
+    <div id="loading" class="hidden text-center py-16">
+      <div class="spinner mx-auto mb-4"></div>
+      <p class="text-gray-400 text-sm" id="loading-msg">Fetching page…</p>
+    </div>
+
+    <!-- Error -->
+    <div id="error-box" class="hidden max-w-2xl mx-auto">
+      <div class="rounded-lg border border-red-500/30 bg-red-500/10 px-5 py-4 text-red-300 text-sm flex items-start gap-3">
+        <span class="text-lg mt-0.5">⚠️</span>
+        <span id="error-msg"></span>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div id="results" class="hidden fade-in space-y-8">
+
+      <!-- Crawled URLs + Site Info -->
+      <div class="card p-5">
+        <div class="flex items-start justify-between flex-wrap gap-4">
+          <div>
+            <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Analyzed Site</h3>
+            <p class="text-white font-semibold text-base" id="res-title"></p>
+            <p class="text-gray-400 text-sm mt-1 max-w-xl" id="res-description"></p>
+          </div>
+          <div class="text-right">
+            <span class="tag-pill text-xs" id="res-site-type"></span>
+            <p class="text-xs text-gray-500 mt-2" id="res-pages-crawled"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Grid -->
+      <div>
+        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Overview</h3>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" id="stats-grid"></div>
+      </div>
+
+      <!-- Interesting Findings -->
+      <div>
+        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Interesting Findings</h3>
+        <div class="grid gap-3" id="findings-grid"></div>
+      </div>
+
+      <!-- Charts Row -->
+      <div class="grid md:grid-cols-2 gap-6">
+        <!-- Word Frequency -->
+        <div class="card p-5">
+          <h3 class="text-sm font-semibold text-gray-300 mb-4">Top Keywords</h3>
+          <div id="word-bars" class="space-y-2"></div>
+        </div>
+        <!-- Sentiment -->
+        <div class="card p-5">
+          <h3 class="text-sm font-semibold text-gray-300 mb-4">Content Sentiment</h3>
+          <div id="sentiment-section">
+            <div class="chart-container flex items-center justify-center">
+              <canvas id="sentiment-chart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bigrams + Year Activity -->
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="card p-5">
+          <h3 class="text-sm font-semibold text-gray-300 mb-4">Common Phrases (Bigrams)</h3>
+          <div id="bigram-bars" class="space-y-2"></div>
+        </div>
+        <div class="card p-5">
+          <h3 class="text-sm font-semibold text-gray-300 mb-4">Content Activity by Year</h3>
+          <div class="chart-container">
+            <canvas id="year-chart"></canvas>
+          </div>
+          <p id="no-year-data" class="text-gray-500 text-sm text-center hidden mt-2">No year data detected.</p>
+        </div>
+      </div>
+
+      <!-- Links + Tags + Authors -->
+      <div class="grid md:grid-cols-3 gap-6">
+        <!-- Link Domains -->
+        <div class="card p-5">
+          <h3 class="text-sm font-semibold text-gray-300 mb-4">Link Destinations</h3>
+          <div id="domain-list" class="space-y-2"></div>
+        </div>
+        <!-- Tags -->
+        <div class="card p-5">
+          <h3 class="text-sm font-semibold text-gray-300 mb-4">Topics &amp; Tags</h3>
+          <div id="tags-section"></div>
+        </div>
+        <!-- Authors -->
+        <div class="card p-5">
+          <h3 class="text-sm font-semibold text-gray-300 mb-4">Authors</h3>
+          <div id="authors-section"></div>
+        </div>
+      </div>
+
+      <!-- Sample Posts -->
+      <div id="posts-section">
+        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Sample Posts Found</h3>
+        <div class="grid gap-3" id="posts-grid"></div>
+      </div>
+
+      <!-- Headings -->
+      <div id="headings-section">
+        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Page Structure (Headings)</h3>
+        <div class="card p-5">
+          <div id="headings-list" class="space-y-1"></div>
+        </div>
+      </div>
+
+    </div><!-- /results -->
+  </main>
+
+  <footer class="text-center text-xs text-gray-500 py-8">
+    DataScraper — respects robots.txt conventions &middot; for educational use
+  </footer>
+
+<script>
+  let sentimentChart = null;
+  let yearChart = null;
+
+  function $(id) { return document.getElementById(id); }
+
+  function showError(msg) {
+    $('error-box').classList.remove('hidden');
+    $('error-msg').textContent = msg;
+  }
+  function hideError() { $('error-box').classList.add('hidden'); }
+
+  function setLoading(msg) {
+    $('loading').classList.remove('hidden');
+    $('loading-msg').textContent = msg || 'Analyzing…';
+  }
+  function hideLoading() { $('loading').classList.add('hidden'); }
+
+  async function startAnalysis() {
+    const url = $('url-input').value.trim();
+    if (!url) { showError('Please enter a URL.'); return; }
+    const maxPages = parseInt($('max-pages').value);
+
+    hideError();
+    $('results').classList.add('hidden');
+    $('analyze-btn').disabled = true;
+    setLoading('Fetching page…');
+
+    setTimeout(() => setLoading('Extracting content…'), 800);
+    setTimeout(() => setLoading('Analyzing patterns…'), 2200);
+
+    try {
+      const res = await fetch('/scrape', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, max_pages: maxPages }),
+      });
+      const json = await res.json();
+      hideLoading();
+      $('analyze-btn').disabled = false;
+
+      if (!res.ok || !json.success) {
+        showError(json.error || 'Unknown error occurred.');
+        return;
+      }
+      renderResults(json.data);
+    } catch (e) {
+      hideLoading();
+      $('analyze-btn').disabled = false;
+      showError('Network error: ' + e.message);
+    }
+  }
+
+  $('url-input').addEventListener('keydown', e => { if (e.key === 'Enter') startAnalysis(); });
+
+  // ---- RENDER ----
+
+  function renderResults(d) {
+    const stats = d.stats || {};
+
+    // Site info
+    $('res-title').textContent = stats.page_title || 'Untitled Page';
+    $('res-description').textContent = stats.description || '';
+    const siteTypeEl = $('res-site-type');
+    siteTypeEl.textContent = (stats.site_type || 'general').toUpperCase();
+    $('res-pages-crawled').textContent = `${(d.crawled_urls || []).length} page(s) crawled`;
+
+    // Stats grid
+    const statItems = [
+      { label: 'Words Analyzed', value: (stats.total_words || 0).toLocaleString(), icon: '📝' },
+      { label: 'Unique Words', value: (stats.unique_words || 0).toLocaleString(), icon: '🔤' },
+      { label: 'Posts/Items', value: (stats.posts_found || 0).toLocaleString(), icon: '📄' },
+      { label: 'Internal Links', value: (stats.internal_links || 0).toLocaleString(), icon: '🔗' },
+      { label: 'External Links', value: (stats.external_links || 0).toLocaleString(), icon: '↗️' },
+      { label: 'Headings', value: (stats.headings_found || 0).toLocaleString(), icon: '📑' },
+      { label: 'Authors', value: (stats.authors_found || 0).toLocaleString(), icon: '👤' },
+      { label: 'Tags Found', value: (stats.tags_found || 0).toLocaleString(), icon: '🏷️' },
+    ];
+    $('stats-grid').innerHTML = statItems.map(s => `
+      <div class="stat-card flex items-center gap-3">
+        <span class="text-2xl">${s.icon}</span>
+        <div>
+          <p class="text-xl font-bold text-white">${s.value}</p>
+          <p class="text-xs text-gray-400">${s.label}</p>
+        </div>
+      </div>
+    `).join('');
+
+    // Findings
+    const findings = d.interesting_findings || [];
+    $('findings-grid').innerHTML = findings.length
+      ? findings.map(f => `
+        <div class="card p-4 finding-${f.importance} flex items-start gap-4">
+          <span class="text-2xl mt-0.5 shrink-0">${f.icon || '💡'}</span>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 mb-1 flex-wrap">
+              <h4 class="font-semibold text-white text-sm">${escHtml(f.title)}</h4>
+              <span class="badge-${f.importance} text-xs px-2 py-0.5 rounded-full font-medium">${f.importance}</span>
+            </div>
+            <p class="text-gray-400 text-sm leading-relaxed">${escHtml(f.detail)}</p>
+          </div>
+        </div>
+      `).join('')
+      : '<p class="text-gray-400 text-sm">No findings generated.</p>';
+
+    // Word frequency bars
+    renderBars('word-bars', d.word_freq || [], 'word', 'count', '#6366f1');
+
+    // Bigram bars
+    renderBars('bigram-bars', d.bigram_freq || [], 'phrase', 'count', '#22d3ee');
+
+    // Sentiment chart
+    renderSentimentChart(d.sentiment || {});
+
+    // Year chart
+    renderYearChart(d.year_activity || []);
+
+    // Link domains
+    const domains = d.link_domains || [];
+    $('domain-list').innerHTML = domains.length
+      ? domains.map(d => `
+        <div class="flex items-center justify-between gap-2 text-sm py-1">
+          <span class="text-gray-300 truncate">${escHtml(d.domain)}</span>
+          <span class="text-gray-400 shrink-0">${d.count}</span>
+        </div>
+      `).join('')
+      : '<p class="text-gray-400 text-sm">No links found.</p>';
+
+    // Tags
+    const tags = d.tag_freq || [];
+    $('tags-section').innerHTML = tags.length
+      ? '<div class="flex flex-wrap gap-2">' +
+        tags.map(t => `<span class="tag-pill">${escHtml(t.tag)} <span class="ml-1 opacity-60">${t.count}</span></span>`).join('') +
+        '</div>'
+      : '<p class="text-gray-400 text-sm">No tags detected.</p>';
+
+    // Authors
+    const authors = d.author_freq || [];
+    $('authors-section').innerHTML = authors.length
+      ? authors.map((a, i) => `
+        <div class="flex items-center gap-2 py-1.5 ${i < authors.length - 1 ? 'border-b border-white/5' : ''}">
+          <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0" style="background: linear-gradient(135deg,#6366f1,#22d3ee)">
+            ${escHtml((a.author[0] || '?').toUpperCase())}
+          </div>
+          <span class="text-sm text-gray-300 truncate flex-1">${escHtml(a.author)}</span>
+          <span class="text-xs text-gray-400">${a.count} post${a.count !== 1 ? 's' : ''}</span>
+        </div>
+      `).join('')
+      : '<p class="text-gray-400 text-sm">No authors detected.</p>';
+
+    // Sample Posts
+    const posts = d.sample_posts || [];
+    if (posts.length) {
+      $('posts-section').classList.remove('hidden');
+      $('posts-grid').innerHTML = posts.map(p => `
+        <div class="post-card p-4">
+          ${p.title ? `<h4 class="font-semibold text-white text-sm mb-1">${escHtml(p.title)}</h4>` : ''}
+          <div class="flex items-center gap-3 mb-2 flex-wrap text-xs text-gray-400">
+            ${p.author ? `<span>👤 ${escHtml(p.author)}</span>` : ''}
+            ${p.date ? `<span>📅 ${escHtml(p.date)}</span>` : ''}
+            ${p.word_count ? `<span>📝 ~${p.word_count} words</span>` : ''}
+            ${p.tags && p.tags.length ? `<span class="tag-pill">${escHtml(p.tags[0])}</span>` : ''}
+          </div>
+          <p class="text-gray-400 text-sm leading-relaxed line-clamp-3">${escHtml(p.text.substring(0, 280))}${p.text.length > 280 ? '…' : ''}</p>
+        </div>
+      `).join('');
+    } else {
+      $('posts-section').classList.add('hidden');
+    }
+
+    // Headings
+    const headings = d.headings_sample || [];
+    if (headings.length) {
+      $('headings-section').classList.remove('hidden');
+      $('headings-list').innerHTML = headings.map(h => `
+        <div class="text-sm py-0.5" style="padding-left: ${(h.level - 1) * 16}px">
+          <span class="text-gray-500 text-xs mr-2 font-mono">H${h.level}</span>
+          <span class="text-gray-300">${escHtml(h.text)}</span>
+        </div>
+      `).join('');
+    } else {
+      $('headings-section').classList.add('hidden');
+    }
+
+    $('results').classList.remove('hidden');
+    $('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function renderBars(containerId, items, labelKey, countKey, color) {
+    const container = $(containerId);
+    if (!items.length) {
+      container.innerHTML = '<p class="text-gray-500 text-sm">No data.</p>';
+      return;
+    }
+    const max = Math.max(...items.map(i => i[countKey]));
+    container.innerHTML = items.slice(0, 15).map(item => {
+      const pct = max > 0 ? Math.round(item[countKey] / max * 100) : 0;
+      return `
+        <div class="flex items-center gap-2 text-sm">
+          <span class="text-gray-300 w-28 shrink-0 truncate text-right text-xs">${escHtml(String(item[labelKey]))}</span>
+          <div class="flex-1 bg-white/5 rounded h-4 overflow-hidden">
+            <div class="bar-fill h-full" style="width: ${pct}%; background: linear-gradient(90deg, ${color}, ${color}aa)"></div>
+          </div>
+          <span class="text-gray-400 text-xs w-8 shrink-0">${item[countKey]}</span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderSentimentChart(sentiment) {
+    const labels = ['Positive', 'Negative', 'Mixed', 'Neutral'];
+    const data = [
+      sentiment.positive || 0,
+      sentiment.negative || 0,
+      sentiment.mixed || 0,
+      sentiment.neutral || 0,
+    ];
+    const total = data.reduce((a, b) => a + b, 0);
+
+    if (total === 0) {
+      $('sentiment-section').innerHTML = '<p class="text-gray-400 text-sm text-center py-8">No posts analyzed for sentiment.</p>';
+      return;
+    }
+
+    if (sentimentChart) sentimentChart.destroy();
+    const ctx = document.createElement('canvas');
+    ctx.id = 'sentiment-chart';
+    $('sentiment-section').innerHTML = '<div class="chart-container flex items-center justify-center"></div>';
+    $('sentiment-section').querySelector('.chart-container').appendChild(ctx);
+
+    sentimentChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels,
+        datasets: [{
+          data,
+          backgroundColor: ['#22c55e', '#ef4444', '#f59e0b', '#6b7280'],
+          borderColor: '#0a0a0f',
+          borderWidth: 3,
+          hoverOffset: 4,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '62%',
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              color: '#9ca3af', font: { size: 11 }, padding: 12,
+              generateLabels: (chart) => {
+                const ds = chart.data.datasets[0];
+                return chart.data.labels.map((label, i) => ({
+                  text: `${label}: ${ds.data[i]} (${total > 0 ? Math.round(ds.data[i]/total*100) : 0}%)`,
+                  fillStyle: ds.backgroundColor[i],
+                  strokeStyle: ds.backgroundColor[i],
+                  hidden: false, index: i,
+                }));
+              }
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ` ${ctx.label}: ${ctx.raw} posts`
+            }
+          }
+        }
+      }
+    });
+  }
+
+  function renderYearChart(yearActivity) {
+    if (!yearActivity.length) {
+      $('no-year-data').classList.remove('hidden');
+      $('year-chart').classList.add('hidden');
+      return;
+    }
+    $('no-year-data').classList.add('hidden');
+    $('year-chart').classList.remove('hidden');
+
+    if (yearChart) yearChart.destroy();
+    const ctx = $('year-chart').getContext('2d');
+    yearChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: yearActivity.map(y => y.year),
+        datasets: [{
+          label: 'References',
+          data: yearActivity.map(y => y.count),
+          backgroundColor: 'rgba(99,102,241,0.7)',
+          borderColor: '#6366f1',
+          borderWidth: 1,
+          borderRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: {
+            ticks: { color: '#9ca3af', font: { size: 10 } },
+            grid: { color: 'rgba(255,255,255,0.04)' },
+          },
+          y: {
+            ticks: { color: '#9ca3af', font: { size: 10 }, stepSize: 1 },
+            grid: { color: 'rgba(255,255,255,0.04)' },
+            beginAtZero: true,
+          }
+        }
+      }
+    });
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+</script>
+</body>
+</html>
